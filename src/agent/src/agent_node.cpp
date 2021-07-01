@@ -58,9 +58,9 @@ void Agent::init_(){
 
     local_pos_pub_ = nh.advertise<geometry_msgs::PoseStamped>("agent" + std::to_string(id_) + "/local_pos", 1000);
     local_vel_pub_ = nh.advertise<geometry_msgs::TwistStamped>("agent" + std::to_string(id_) + "/local_vel", 1000);
-    status_pub_ = nh.advertise<std_msgs::Int8>("agent" + std::to_string(id_) + "/status", 1000);
+    status_pub_ = nh.advertise<std_msgs::Header>("agent" + std::to_string(id_) + "/status", 1000);
 
-    ros::Subscriber goal_sub = nh.subscribe("agent" + std::to_string(id_) + "/goal_sub", 1000, &Agent::goal_pos_callback, this);
+    ros::Subscriber goal_sub = nh.subscribe("/goal_sub", 1000, &Agent::goal_pos_callback, this);
 
     loop_();
 }
@@ -114,7 +114,7 @@ void Agent::update_status_(){
     bool reached = false;
 
     for (int i = 0; i < 3; i++){
-        if ((goal_[i] - position_[i]) > 1.0) {
+        if ((goal_[i] - position_[i]) >      1.0) {
             reached = false;
             status_ = 0;
             break;
@@ -143,7 +143,7 @@ void Agent::PRINT_AGENT_STATE(){
 void Agent:: publish_position_(){
     geometry_msgs::PoseStamped pose;
     pose.header.stamp = ros::Time::now();
-    pose.header.frame_id = "agent_" + std::to_string(id_);
+    pose.header.frame_id = std::to_string(id_);
     pose.pose.position.x = position_[0];
     pose.pose.position.y = position_[1];
     pose.pose.position.z = position_[2];
@@ -154,7 +154,7 @@ void Agent:: publish_position_(){
 void Agent::publish_velocity_(){
     geometry_msgs::TwistStamped vel;
     vel.header.stamp = ros::Time::now();
-    vel.header.frame_id = "agent_" + std::to_string(id_);
+    vel.header.frame_id = std::to_string(id_);
     vel.twist.linear.x = velocity_[0];
     vel.twist.linear.y = velocity_[1];
     vel.twist.linear.z = velocity_[2];
@@ -163,14 +163,17 @@ void Agent::publish_velocity_(){
 }
 
 void Agent::publish_status_(){
-    std_msgs::Int8 status;
-    status.data = status_;
-
+    std_msgs::Header status;
+    status.stamp = ros::Time::now();
+    status.frame_id = std::to_string(id_);
+    status.seq = status_;
     status_pub_.publish(status);
 }
 void Agent::goal_pos_callback(const geometry_msgs::PoseStamped::ConstPtr& msg){
-    goal_[0], goal_[1], goal_[2] =  msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
-
+    if (msg->header.frame_id.compare(std::to_string(id_))){
+        goal_[0], goal_[1], goal_[2] =  
+                msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
+    }
 }
 
 
